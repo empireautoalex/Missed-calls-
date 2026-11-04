@@ -1,0 +1,17 @@
+{
+  "name": "missed-calls-auto-reply",
+  "version": "1.0.0",
+  "description": "Automatically texts callers back when you miss their call.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" },
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "twilio": "^5.3.7"
+  }
+}
