@@ -19,6 +19,11 @@ const config = {
   ringTimeoutSeconds: Number(process.env.RING_TIMEOUT_SECONDS || 20),
   cooldownHours: Number(process.env.COOLDOWN_HOURS || 12),
   validateRequests: process.env.VALIDATE_TWILIO_REQUESTS !== 'false',
+  businessHours: process.env.BUSINESS_HOURS || 'Mon-Fri 10:30-19:00; Sat 10:30-17:00',
+  timeZone: process.env.TIMEZONE || 'America/New_York',
+  afterHoursMessage:
+    process.env.AFTER_HOURS_MESSAGE ||
+    "Thanks for your message! I'm currently outside business hours and not available by call or text. My hours are Mon–Fri 10:30 AM–7:00 PM and Sat 10:30 AM–5:00 PM (closed Sunday). I'll get back to you during business hours.",
   message:
     process.env.AUTO_REPLY_MESSAGE ||
     "Hi, sorry I missed your call! I'm currently busy and I will get back to you as soon as I can.",

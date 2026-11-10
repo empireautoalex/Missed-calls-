@@ -1,5 +1,6 @@
 const express = require('express');
 const twilio = require('twilio');
+const { parseHours, isOpen } = require('./hours');
 
 const { VoiceResponse } = twilio.twiml;
 
@@ -15,6 +16,8 @@ function createApp(config, smsSender) {
   // in a row only gets one text.
   const lastTexted = new Map();
   const cooldownMs = config.cooldownHours * 60 * 60 * 1000;
+  const schedule = config.businessHours ? parseHours(config.businessHours) : null;
+  const now = config.now || (() => new Date());
 
   function shouldText(number, now = Date.now()) {
     // Skip blocked caller ID. Twilio reports it as "anonymous" or +266696687
@@ -33,9 +36,35 @@ function createApp(config, smsSender) {
 
   app.get('/', (req, res) => res.send('Missed-call auto-reply is running.'));
 
-  // 1) Someone calls your Twilio number: ring your cell.
-  app.post('/voice', verify, (req, res) => {
+  // Text the caller (once per cooldown). Never throws.
+  async function textBack(caller, message, reason) {
+    if (!shouldText(caller)) {
+      console.log(`${reason} call from ${caller} - skipped (cooldown or no caller ID).`);
+      return;
+    }
+    lastTexted.set(caller, Date.now());
+    try {
+      await smsSender(caller, message);
+      console.log(`${reason} call from ${caller} - auto-reply sent.`);
+    } catch (err) {
+      lastTexted.delete(caller);
+      console.error(`Failed to text ${caller}:`, err.message);
+    }
+  }
+
+  // 1) Someone calls your Twilio number.
+  app.post('/voice', verify, async (req, res) => {
     const twiml = new VoiceResponse();
+
+    // Outside business hours: don't ring your phone, just text them.
+    if (schedule && !isOpen(schedule, config.timeZone, now())) {
+      await textBack(req.body.From, config.afterHoursMessage, 'After-hours');
+      twiml.say("Thanks for calling. We're currently closed. We've sent you a text with our business hours.");
+      twiml.hangup();
+      return res.type('text/xml').send(twiml.toString());
+    }
+
+    // During business hours: ring your cell.
     const dial = twiml.dial({
       timeout: config.ringTimeoutSeconds,
       action: '/after-dial',
@@ -53,18 +82,7 @@ function createApp(config, smsSender) {
     const twiml = new VoiceResponse();
 
     if (MISSED_STATUSES.has(status)) {
-      if (shouldText(caller)) {
-        lastTexted.set(caller, Date.now());
-        try {
-          await smsSender(caller, config.message);
-          console.log(`Missed call from ${caller} (${status}) - auto-reply sent.`);
-        } catch (err) {
-          lastTexted.delete(caller);
-          console.error(`Failed to text ${caller}:`, err.message);
-        }
-      } else {
-        console.log(`Missed call from ${caller} - skipped (cooldown or no caller ID).`);
-      }
+      await textBack(caller, config.message, `Missed (${status})`);
       twiml.say("Sorry, I can't take your call right now. I'll text you shortly.");
     }
     twiml.hangup();
