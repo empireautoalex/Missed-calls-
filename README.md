@@ -1,5 +1,9 @@
 # Missed Calls Auto-Reply
 
+> **Free option, no Twilio:** if your iPhone's calls and texts show up on a Mac, use the
+> **[Mac after-hours auto-reply](mac/README.md)** instead. It runs on the Mac and texts back
+> through the Messages app.
+
 Automatically texts callers back so you never lose a lead.
 
 **Outside business hours** (Mon–Fri 10:30 AM–7:00 PM, Sat 10:30 AM–5:00 PM, closed Sunday),
